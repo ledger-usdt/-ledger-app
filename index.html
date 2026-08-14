@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ledger — крипто-комьюнити</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --bg:#17151D;
+    --surface:#221F2A;
+    --surface-raised:#2C2837;
+    --line:#403A52;
+    --text:#F8F6F1;
+    --text-dim:#B3ADC4;
+    --gold:#FFD84D;
+    --gold-glow:rgba(255, 216, 77, .38);
+    --teal:#F0DA8F;
+    --red:#FF7B7B;
+    --radius:14px;
+    --font-display:'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-mono:'IBM Plex Mono', 'Courier New', monospace;
+    --font-body:'Inter', 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:var(--font-body); overscroll-behavior:none;}
+  body{background:
+    radial-gradient(circle at 50% -8%, rgba(255,216,77,.10), transparent 55%),
+    radial-gradient(circle at 90% 100%, rgba(255,216,77,.05), transparent 45%),
+    var(--bg);}
+  #app{display:flex; flex-direction:column; height:100vh; max-width:520px; margin:0 auto; position:relative;}
+  button, input, textarea{font-family:inherit;}
+  button{transition:box-shadow .25s ease, background-color .25s ease, border-color .25s ease, opacity .25s ease, transform .15s ease;}
+  button:active{transform:scale(.97);}
+  .screen, .chat-thread, #onboarding{transition:opacity .25s ease;}
+
+  /* ---------- Ticker ---------- */
+  .ticker-wrap{background:var(--surface); border-bottom:1px solid var(--line); overflow:hidden; white-space:nowrap; flex-shrink:0;}
+  .ticker{display:inline-block; padding:8px 0; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);
+    animation:scroll 28s linear infinite;}
+  .ticker span{margin-right:28px;}
+  .ticker .up{color:var(--teal);}
+  .ticker .gold{color:var(--gold);}
+  @keyframes scroll{from{transform:translateX(0);} to{transform:translateX(-50%);}}
+
+  /* ---------- Header ---------- */
+  header{padding:20px 20px 4px; flex-shrink:0;}
+  .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold);}
+  h1{font-family:var(--font-display); font-size:26px; margin:6px 0 2px; font-weight:600; letter-spacing:-.01em;}
+  .sub{color:var(--text-dim); font-size:13px; margin:0;}
+
+  /* ---------- Screens ---------- */
+  main{flex:1; overflow-y:auto; padding:16px 20px 90px;}
+  .screen{display:none;}
+  .screen.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- Onboarding ---------- */
+  #onboarding{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column;
+    justify-content:center; padding:32px 28px; z-index:20;}
+  #onboarding.show{display:flex;}
+  .node-graph{width:100%; max-width:280px; margin:0 auto 28px; display:block;}
+  #onboarding h2{font-family:var(--font-display); font-size:28px; line-height:1.15; margin:0 0 12px; text-align:center;}
+  #onboarding p{color:var(--text-dim); font-size:14px; text-align:center; line-height:1.5; margin:0 auto 32px; max-width:320px;}
+  .cta{display:block; width:100%; padding:15px; border:none; border-radius:var(--radius); background:var(--gold);
+    color:#161200; font-family:var(--font-display); font-weight:600; font-size:15px; cursor:pointer;
+    box-shadow:0 0 18px var(--gold-glow), 0 0 2px var(--gold-glow);}
+  .cta:active{opacity:.85;}
+  .ghost{background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; width:100%; cursor:pointer; font-family:var(--font-body);}
+
+  /* ---------- Cards ---------- */
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px;
+    box-shadow:0 1px 0 rgba(255,216,77,.03) inset, 0 6px 20px rgba(0,0,0,.25);}
+  .card-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .avatar{width:36px; height:36px; border-radius:10px; background:var(--surface-raised); display:flex; align-items:center;
+    justify-content:center; font-family:var(--font-mono); font-size:13px; color:var(--gold); flex-shrink:0; border:1px solid var(--line);}
+  .name{font-weight:600; font-size:14px;}
+  .role{font-size:12px; color:var(--text-dim);}
+  .post-text{font-size:14px; line-height:1.5; color:var(--text); margin:0 0 10px;}
+  .tag-row{display:flex; gap:6px; flex-wrap:wrap;}
+  .tag{font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:6px; background:var(--surface-raised); color:var(--teal); border:1px solid var(--line);}
+
+  .person-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .person-row:last-child{border-bottom:none;}
+  .person-info{flex:1; min-width:0;}
+  .person-info .name{margin-bottom:2px; display:flex; align-items:center; gap:6px;}
+  .person-info .uname{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); font-weight:400;}
+  .connect-btn{font-family:var(--font-mono); font-size:11px; padding:7px 12px; border-radius:8px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold); cursor:pointer; flex-shrink:0;}
+  .connect-btn.is-friend{border-color:var(--teal); color:var(--teal);}
+
+  /* ---------- People toolbar ---------- */
+  .people-toolbar{margin-bottom:14px;}
+  .filter-tabs{display:flex; gap:8px; margin-bottom:12px;}
+  .filter-tab{font-family:var(--font-mono); font-size:12px; padding:7px 14px; border-radius:20px; border:1px solid var(--line);
+    background:var(--surface); color:var(--text-dim); cursor:pointer;}
+  .filter-tab.active{border-color:var(--gold); color:var(--gold); background:rgba(255,216,77,.08); box-shadow:0 0 10px var(--gold-glow);}
+  .add-friend-row{display:flex; gap:8px;}
+  .add-friend-row input{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 12px;
+    color:var(--text); font-family:var(--font-body); font-size:13px; outline:none;}
+  .add-friend-row input:focus{border-color:var(--gold);}
+  .add-friend-row input::placeholder{color:var(--text-dim);}
+  .add-friend-row button{font-family:var(--font-display); font-weight:600; font-size:13px; padding:0 16px; border-radius:10px;
+    border:none; background:var(--gold); color:#161200; cursor:pointer; flex-shrink:0;}
+  .hint{font-size:11px; color:var(--text-dim); margin:8px 2px 0;}
+
+  /* ---------- Chat list ---------- */
+  .chat-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .chat-row:last-child{border-bottom:none;}
+  .chat-info{flex:1; min-width:0;}
+  .chat-info .name{margin-bottom:2px;}
+  .chat-preview{font-size:12px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .chat-meta{text-align:right; flex-shrink:0;}
+  .chat-time{font-size:11px; color:var(--text-dim); font-family:var(--font-mono);}
+  .unread-badge{display:inline-block; background:var(--gold); color:#161200; font-size:10px; font-family:var(--font-mono);
+    font-weight:600; border-radius:8px; padding:1px 6px; margin-top:4px;}
+
+  /* ---------- Chat thread overlay ---------- */
+  .chat-thread{position:absolute; inset:0; background:var(--bg); z-index:30; display:none; flex-direction:column;}
+  .chat-thread.open{display:flex;}
+  .chat-thread-header{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  .chat-back{background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; padding:0 4px 0 0;}
+  .chat-messages{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px;}
+  .msg{max-width:75%; padding:10px 13px; border-radius:14px; font-size:14px; line-height:1.4;}
+  .msg.them{background:var(--surface); border:1px solid var(--line); align-self:flex-start; border-bottom-left-radius:4px;}
+  .msg.me{background:var(--gold); color:#161200; align-self:flex-end; border-bottom-right-radius:4px; box-shadow:0 0 12px var(--gold-glow);}
+  .chat-input-row{display:flex; gap:8px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); flex-shrink:0;}
+  .chat-input-row input{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:11px 16px;
+    color:var(--text); font-family:var(--font-body); font-size:14px; outline:none;}
+  .chat-input-row input:focus{border-color:var(--gold);}
+  .chat-input-row button{width:40px; height:40px; border-radius:50%; border:none; background:var(--gold); color:#161200;
+    font-size:15px; cursor:pointer; flex-shrink:0; box-shadow:0 0 12px var(--gold-glow);}
+
+  .profile-hero{text-align:center; padding:20px 0 8px;}
+  .profile-hero .avatar{width:64px; height:64px; font-size:22px; margin:0 auto 12px; border-radius:16px;}
+  .stat-row{display:flex; justify-content:center; gap:24px; margin:18px 0 6px;}
+  .stat{text-align:center;}
+  .stat b{display:block; font-family:var(--font-mono); font-size:17px; color:var(--gold);}
+  .stat span{font-size:11px; color:var(--text-dim);}
+  .empty{text-align:center; color:var(--text-dim); font-size:13px; padding:36px 20px;}
+
+  /* ---------- Bottom nav ---------- */
+  nav{position:absolute; bottom:0; left:0; right:0; display:flex; background:var(--surface);
+    border-top:1px solid var(--line); padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  nav button{flex:1; background:none; border:none; color:var(--text-dim); font-family:var(--font-body);
+    font-size:10px; padding:6px 0; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;}
+  nav button .dot{width:5px; height:5px; border-radius:50%; background:transparent; transition:box-shadow .25s ease, background-color .25s ease;}
+  nav button.active{color:var(--text);}
+  nav button.active .dot{background:var(--gold); box-shadow:0 0 8px var(--gold-glow);}
+
+  /* ---------- Dev badge ---------- */
+  .dev-badge{display:inline-flex; align-items:center; gap:3px; font-family:var(--font-mono); font-size:9px;
+    padding:2px 6px; border-radius:6px; background:rgba(255,216,77,.14); color:var(--gold); border:1px solid rgba(255,216,77,.4);
+    vertical-align:middle; white-space:nowrap; box-shadow:0 0 8px var(--gold-glow);}
+
+  /* ---------- Feed composer ---------- */
+  .composer{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:16px;}
+  .composer textarea{width:100%; background:transparent; border:none; color:var(--text); font-family:var(--font-body);
+    font-size:14px; resize:none; outline:none; min-height:44px; line-height:1.4;}
+  .composer textarea::placeholder{color:var(--text-dim);}
+  .composer-row{display:flex; justify-content:flex-end; margin-top:8px;}
+  .composer-row button{font-family:var(--font-display); font-weight:600; font-size:13px; padding:9px 18px; border-radius:10px;
+    border:none; background:var(--gold); color:#161200; cursor:pointer; box-shadow:0 0 12px var(--gold-glow);}
+  .composer-row button:disabled{opacity:.4; cursor:default;}
+  .post-time{font-size:11px; color:var(--text-dim); font-family:var(--font-mono); margin-left:auto;}
+
+  /* ---------- Chat toolbar / groups ---------- */
+  .chat-toolbar{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .chat-toolbar .filter-tabs{margin-bottom:0; flex:1;}
+  .new-group-btn{font-family:var(--font-mono); font-size:12px; padding:7px 12px; border-radius:20px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold); cursor:pointer; white-space:nowrap;}
+  .group-panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:14px; display:none;}
+  .group-panel.open{display:block;}
+  .group-panel input[type="text"]{width:100%; background:var(--surface-raised); border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; color:var(--text); font-family:var(--font-body); font-size:13px; outline:none; margin-bottom:10px;}
+  .group-panel input[type="text"]:focus{border-color:var(--gold);}
+  .friend-check-list{max-height:160px; overflow-y:auto; margin-bottom:10px;}
+  .friend-check-row{display:flex; align-items:center; gap:10px; padding:8px 2px;}
+  .friend-check-row span{font-size:13px;}
+  .group-panel-actions{display:flex; gap:8px; justify-content:flex-end;}
+  .group-panel-actions button{font-family:var(--font-display); font-weight:600; font-size:13px; padding:9px 16px; border-radius:10px; border:none; cursor:pointer;}
+  .btn-cancel{background:var(--surface-raised); color:var(--text-dim);}
+  .btn-create{background:var(--gold); color:#161200; box-shadow:0 0 12px var(--gold-glow);}
+
+  /* ---------- Toast (replaces blocking alert(), safer inside Telegram webview) ---------- */
+  .toast{position:fixed; top:calc(16px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%) translateY(-8px); opacity:0;
+    background:var(--surface-raised); border:1px solid var(--line); color:var(--text);
+    padding:11px 18px; border-radius:12px; font-size:13px; z-index:200; max-width:88%; text-align:center;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); transition:opacity .25s ease, transform .25s ease;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.error{border-color:var(--red); color:var(--red);}
+  .toast.success{border-color:var(--gold); box-shadow:0 8px 24px rgba(0,0,0,.4), 0 0 14px var(--gold-glow);}
+
+  /* ---------- Market / chart tab ---------- */
+  .coin-tabs{display:flex; gap:8px; overflow-x:auto; margin-bottom:16px; padding-bottom:2px;}
+  .coin-pill{flex-shrink:0; font-family:var(--font-mono); font-weight:600; font-size:12px; padding:8px 16px;
+    border-radius:20px; border:1px solid var(--line); background:var(--surface); color:var(--text-dim); cursor:pointer;}
+  .coin-pill.active{border-color:var(--gold); color:var(--gold); background:rgba(255,216,77,.1); box-shadow:0 0 10px var(--gold-glow);}
+  .market-header{display:flex; align-items:baseline; gap:10px; margin-bottom:14px;}
+  .market-price{font-family:var(--font-display); font-size:28px; font-weight:600; letter-spacing:-.01em;}
+  .market-change{font-family:var(--font-mono); font-size:13px; padding:3px 9px; border-radius:8px;}
+  .market-change.up{color:var(--gold); background:rgba(255,216,77,.1);}
+  .market-change.down{color:var(--red); background:rgba(255,123,123,.1);}
+  .chart-wrap{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px;
+    margin-bottom:14px; box-shadow:0 1px 0 rgba(255,216,77,.03) inset, 0 6px 20px rgba(0,0,0,.25);}
+  .chart-wrap svg{width:100%; height:160px; display:block; transition:opacity .2s ease;}
+  .range-tabs{display:flex; gap:8px;}
+  .fear-greed-card{display:flex; align-items:center; gap:16px; margin-bottom:16px;}
+  .fg-value{font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--gold);
+    width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--gold); box-shadow:0 0 16px var(--gold-glow); flex-shrink:0;}
+  .fg-label{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin-bottom:4px;}
+  .fg-classification{font-family:var(--font-display); font-size:16px; font-weight:600;}
+  .rank-num{width:24px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:15px;
+    color:var(--text-dim); flex-shrink:0;}
+
+  /* ---------- Invite ---------- */
+  .invite-card{margin-bottom:16px;}
+  .invite-title{font-family:var(--font-display); font-size:15px; font-weight:600; margin-bottom:4px;}
+  .invite-sub{font-size:12px; color:var(--text-dim); line-height:1.4; margin-bottom:12px;}
+  .invite-link-row{display:flex; gap:8px; margin-bottom:10px;}
+  .invite-link-row input{flex:1; background:var(--surface-raised); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; color:var(--text-dim); font-family:var(--font-mono); font-size:11px; outline:none; min-width:0;}
+  .invite-link-row button{font-family:var(--font-display); font-weight:600; font-size:12px; padding:0 14px;
+    border-radius:10px; border:none; background:var(--surface-raised); color:var(--text); cursor:pointer; flex-shrink:0;}
+  .invite-share-btn{width:100%; padding:11px; border-radius:10px; border:none; background:var(--gold); color:#161200;
+    font-family:var(--font-display); font-weight:600; font-size:13px; cursor:pointer; box-shadow:0 0 12px var(--gold-glow);}
+  .coin-logo{background:var(--surface-raised) !important;}
+  .coin-logo img{width:60%; height:60%; margin:20%; object-fit:contain; border-radius:0;}
+  .chart-coin-row{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  .chart-coin-row img{width:22px; height:22px; border-radius:50%;}
+  .chart-coin-row span{font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
+  .live-row{display:flex; align-items:center; gap:7px; margin-bottom:12px;}
+  .live-dot{width:7px; height:7px; border-radius:50%; background:var(--gold); box-shadow:0 0 8px var(--gold-glow);
+    animation:pulseLive 1.6s ease-in-out infinite;}
+  @keyframes pulseLive{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  .live-label{font-family:var(--font-mono); font-size:11px; color:var(--text-dim);}
+  .chat-row.selected{background:rgba(255,216,77,.07); border-radius:10px; margin:0 -6px; padding-left:10px; padding-right:10px;}
+  .chat-row .market-change{flex-shrink:0; font-size:11px;}
+
+  /* ---------- Brand header ---------- */
+  .brand-row{display:flex; align-items:center; gap:7px; padding:12px 20px 2px;}
+  .brand-word{font-family:var(--font-display); font-size:12px; letter-spacing:.16em; color:var(--text-dim); font-weight:600;}
+
+  /* ---------- Richer avatar + entrance animation ---------- */
+  .avatar{background:linear-gradient(135deg, #2C2837, #1B1822); overflow:hidden;}
+  .card, .chat-row, .person-row, .msg{animation:fadeInUp .35s ease both;}
+  @keyframes fadeInUp{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- Skeleton loader ---------- */
+  .skeleton-row{height:56px; border-radius:12px; margin-bottom:10px;
+    background:linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 40%, var(--surface) 60%);
+    background-size:300% 100%; animation:shimmer 1.4s ease infinite;}
+  @keyframes shimmer{0%{background-position:120% 0;} 100%{background-position:-20% 0;}}
+
+  /* ---------- Like button ---------- */
+  .like-btn{display:inline-flex; align-items:center; gap:6px; background:none; border:1px solid var(--line);
+    border-radius:20px; padding:6px 13px; color:var(--text-dim); font-family:var(--font-mono); font-size:12px;
+    cursor:pointer; margin-top:4px;}
+  .like-btn.liked{border-color:var(--gold); color:var(--gold); background:rgba(255,216,77,.09); box-shadow:0 0 10px var(--gold-glow);}
+
+  /* ---------- News ---------- */
+  .news-card{position:relative; overflow:hidden;}
+  .news-watermark{position:absolute; top:12px; right:12px; display:flex; align-items:center; gap:4px;
+    font-family:var(--font-mono); font-size:9px; letter-spacing:.08em; color:var(--gold); opacity:.65;
+    background:rgba(255,216,77,.08); border:1px solid rgba(255,216,77,.3); padding:3px 8px; border-radius:6px; z-index:1;}
+  .news-img{width:100%; max-height:160px; object-fit:cover; border-radius:10px; margin-bottom:10px; display:block; background:var(--surface-raised);}
+  .news-source{font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  .news-title{font-size:14px; font-weight:600; line-height:1.4; margin:0 0 10px;}
+  .news-link{background:none; border:none; color:var(--gold); font-family:var(--font-mono); font-size:12px; cursor:pointer; padding:0;}
+
+  .msg-sender{font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin:0 0 3px 2px;}
+
+  /* ---------- Moderation ---------- */
+  .mod-thread{position:absolute; inset:0; background:var(--bg); z-index:35; display:none; flex-direction:column;}
+  .mod-thread.open{display:flex;}
+  .mod-thread-header{display:flex; align-items:center; gap:10px; padding:16px 16px 14px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  .mod-thread-header h2{font-family:var(--font-display); font-size:17px; margin:0;}
+  .mod-list{flex:1; overflow-y:auto; padding:16px;}
+  .mod-actions{display:flex; gap:8px; margin-top:10px;}
+  .mod-approve, .mod-reject{flex:1; font-family:var(--font-display); font-weight:600; font-size:13px; padding:9px 0;
+    border-radius:10px; border:none; cursor:pointer;}
+  .mod-approve{background:var(--gold); color:#161200; box-shadow:0 0 12px var(--gold-glow);}
+  .mod-reject{background:var(--surface-raised); color:var(--red); border:1px solid rgba(255,107,107,.4);}
+
+  .avatar img{width:100%; height:100%; object-fit:cover; border-radius:inherit;}
+
+  .avatar-upload-row{display:flex; justify-content:center; margin-top:12px;}
+  .avatar-upload-btn{font-family:var(--font-mono); font-size:11px; padding:8px 14px; border-radius:8px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold); cursor:pointer;}
+
+  /* ---------- Dev unlock ---------- */
+  .dev-unlock{display:flex; gap:8px; margin-top:18px;}
+  .dev-unlock input{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    color:var(--text); font-family:var(--font-mono); font-size:12px; outline:none;}
+  .dev-unlock button{font-family:var(--font-display); font-weight:600; font-size:12px; padding:0 14px; border-radius:10px;
+    border:none; background:var(--surface-raised); color:var(--text); cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- BRAND -->
+  <div class="brand-row">
+    <svg class="brand-mark" viewBox="0 0 24 24" width="18" height="18">
+      <line x1="12" y1="6" x2="6" y2="16" stroke="#403A52" stroke-width="1.4"/>
+      <line x1="12" y1="6" x2="18" y2="16" stroke="#403A52" stroke-width="1.4"/>
+      <line x1="6" y1="16" x2="18" y2="16" stroke="#403A52" stroke-width="1.4"/>
+      <circle cx="12" cy="6" r="2.6" fill="#FFD84D"/>
+      <circle cx="6" cy="16" r="2.1" fill="#F0DA8F"/>
+      <circle cx="18" cy="16" r="2.1" fill="#F0DA8F"/>
+    </svg>
+    <span class="brand-word">LEDGER</span>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div id="onboarding">
+    <svg class="node-graph" viewBox="0 0 280 140" fill="none">
+      <line x1="60" y1="40" x2="140" y2="70" stroke="#2A3350" stroke-width="1"/>
+      <line x1="140" y1="70" x2="220" y2="35" stroke="#2A3350" stroke-width="1"/>
+      <line x1="140" y1="70" x2="110" y2="120" stroke="#2A3350" stroke-width="1"/>
+      <line x1="140" y1="70" x2="210" y2="110" stroke="#2A3350" stroke-width="1"/>
+      <line x1="60" y1="40" x2="110" y2="120" stroke="#2A3350" stroke-width="1"/>
+      <circle cx="60" cy="40" r="5" fill="#2DD4BF"/>
+      <circle cx="140" cy="70" r="7" fill="#C9A227"/>
+      <circle cx="220" cy="35" r="5" fill="#2DD4BF"/>
+      <circle cx="110" cy="120" r="5" fill="#E5626B"/>
+      <circle cx="210" cy="110" r="5" fill="#2DD4BF"/>
+    </svg>
+    <h2>Ledger</h2>
+    <p>Сеть для тех, кто шарит в крипте и хочет строить рядом с такими же. Ты — узел графа, а не просто зритель.</p>
+    <button class="cta" id="enterBtn">Войти в комьюнити</button>
+    <button class="ghost" id="skipBtn">Сначала посмотреть</button>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker" id="tickerEl"></div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="eyebrow" id="screenLabel">Лента</div>
+    <h1 id="screenTitle">Что происходит</h1>
+    <p class="sub" id="screenSub">Обновления от людей вашей сети</p>
+  </header>
+
+  <main>
+    <!-- FEED -->
+    <section class="screen active" id="feed">
+      <div class="filter-tabs" id="feedTabs" style="margin-bottom:14px;">
+        <button class="filter-tab active" data-feed-tab="posts">Посты</button>
+        <button class="filter-tab" data-feed-tab="news">Новости</button>
+      </div>
+      <div class="composer" id="composerBox">
+        <textarea id="postInput" placeholder="Поделись чем-то с сетью..." rows="2"></textarea>
+        <div class="composer-row">
+          <button id="postBtn">Опубликовать</button>
+        </div>
+        <div class="hint" id="postHint" style="text-align:right;"></div>
+      </div>
+      <div id="feedList"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+      <div id="newsList" style="display:none;"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+    </section>
+
+    <!-- PEOPLE -->
+    <section class="screen" id="people">
+      <div class="people-toolbar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">Все</button>
+          <button class="filter-tab" data-filter="friends">Друзья</button>
+          <button class="filter-tab" data-filter="top">Топ</button>
+        </div>
+        <div class="add-friend-row">
+          <input type="text" id="addFriendInput" placeholder="@username в Telegram">
+          <button id="addFriendBtn">Добавить</button>
+        </div>
+        <div class="hint" id="addFriendHint"></div>
+      </div>
+      <div class="card" id="peopleList" style="padding:6px 4px;"></div>
+    </section>
+
+    <!-- MARKET -->
+    <section class="screen" id="market">
+      <div class="live-row"><span class="live-dot"></span><span class="live-label">Обновляется каждые 30 сек</span></div>
+      <div class="card fear-greed-card" id="fearGreedCard" style="display:none;">
+        <div class="fg-value" id="fgValue">—</div>
+        <div class="fg-info">
+          <div class="fg-label">Индекс страха и жадности</div>
+          <div class="fg-classification" id="fgClassification"></div>
+        </div>
+      </div>
+      <div class="card" id="monitorList" style="padding:6px 4px; margin-bottom:16px;"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+      <div class="chart-coin-row" id="chartCoinRow"></div>
+      <div class="market-header">
+        <div class="market-price" id="marketPrice">—</div>
+        <div class="market-change" id="marketChange"></div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="chartSvg" viewBox="0 0 320 160" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="range-tabs" id="rangeTabs">
+        <button class="filter-tab active" data-range="1">24ч</button>
+        <button class="filter-tab" data-range="7">7д</button>
+        <button class="filter-tab" data-range="30">30д</button>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section class="screen" id="chat">
+      <div class="chat-toolbar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-chat-filter="dm">Личные</button>
+          <button class="filter-tab" data-chat-filter="groups">Группы</button>
+        </div>
+        <button class="new-group-btn" id="newGroupBtn">+ Группа</button>
+      </div>
+      <div class="group-panel" id="groupPanel">
+        <input type="text" id="groupNameInput" placeholder="Название группы">
+        <div class="friend-check-list" id="friendCheckList"></div>
+        <div class="group-panel-actions">
+          <button class="btn-cancel" id="groupCancelBtn">Отмена</button>
+          <button class="btn-create" id="groupCreateBtn">Создать</button>
+        </div>
+      </div>
+      <div class="card" id="chatList" style="padding:6px 4px;"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="screen" id="profile">
+      <div class="profile-hero">
+        <div class="avatar" id="profileAvatar">Я</div>
+        <div class="avatar-upload-row">
+          <button class="avatar-upload-btn" id="avatarUploadBtn">Изменить аватар</button>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+        </div>
+        <div class="hint" id="avatarHint" style="margin-top:6px;"></div>
+        <div class="name" id="profileName" style="font-size:17px;">Твой профиль</div>
+        <div class="role">Настрой, кем тебя видят другие</div>
+        <div class="stat-row">
+          <div class="stat"><b id="statFriends">0</b><span>связи</span></div>
+          <div class="stat"><b id="statPosts">0</b><span>посты</span></div>
+          <div class="stat"><b id="statLevel">1</b><span>уровень</span></div>
+        </div>
+      </div>
+      <div class="card invite-card">
+        <div class="invite-title">Пригласи друга</div>
+        <div class="invite-sub">Он сразу попадёт в аппу и станет твоим другом автоматически — без ручного ввода username.</div>
+        <div class="invite-link-row">
+          <input type="text" id="inviteLinkInput" readonly>
+          <button id="inviteCopyBtn">Скопировать</button>
+        </div>
+        <button class="invite-share-btn" id="inviteShareBtn">Поделиться в Telegram</button>
+      </div>
+      <div class="empty">Профиль пока пустой — это первая версия аппы.<br>Дальше добавим настройку интересов и связей.</div>
+      <div class="dev-unlock">
+        <input type="text" id="devCodeInput" placeholder="Код разработчика (если он у тебя есть)">
+        <button id="devCodeBtn">ОК</button>
+      </div>
+      <div class="hint" id="devCodeHint"></div>
+      <div class="avatar-upload-row" id="modOpenRow" style="display:none; margin-top:14px;">
+        <button class="avatar-upload-btn" id="modOpenBtn">Модерация постов (<span id="modPendingCount">0</span>)</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- NAV -->
+  <nav>
+    <button class="nav-btn active" data-screen="feed" data-label="Лента" data-title="Что происходит" data-sub="Обновления от людей вашей сети"><span class="dot"></span>Лента</button>
+    <button class="nav-btn" data-screen="chat" data-label="Чат" data-title="Сообщения" data-sub="Общение с людьми из сети"><span class="dot"></span>Чат</button>
+    <button class="nav-btn" data-screen="market" data-label="График" data-title="Крипторынок" data-sub="Курсы и графики"><span class="dot"></span>График</button>
+    <button class="nav-btn" data-screen="people" data-label="Люди" data-title="Комьюнити" data-sub="Те, кто уже в сети"><span class="dot"></span>Люди</button>
+    <button class="nav-btn" data-screen="profile" data-label="Профиль" data-title="Ты" data-sub="Твоя карточка в сети"><span class="dot"></span>Профиль</button>
+  </nav>
+
+  <!-- CHAT THREAD OVERLAY -->
+  <div class="chat-thread" id="chatThread">
+    <div class="chat-thread-header">
+      <button class="chat-back" id="chatBackBtn">←</button>
+      <div class="avatar" id="threadAvatar"></div>
+      <div><div class="name" id="threadName"></div><div class="role" id="threadRole"></div></div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Сообщение...">
+      <button id="chatSendBtn">➤</button>
+    </div>
+  </div>
+
+  <!-- MODERATION OVERLAY (developer only) -->
+  <div class="mod-thread" id="modThread">
+    <div class="mod-thread-header">
+      <button class="chat-back" id="modBackBtn">←</button>
+      <h2>Посты на проверке</h2>
+    </div>
+    <div class="mod-list" id="modList"></div>
+  </div>
+
+</div>
+
+<script>
+  // Telegram WebApp init
+  const tg = window.Telegram ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    if (tg.setHeaderColor) { try { tg.setHeaderColor('#0F1420'); } catch(e){} }
+    if (tg.setBackgroundColor) { try { tg.setBackgroundColor('#0F1420'); } catch(e){} }
+  }
+
+  const DEV_CODE = 'ledger-dev-2026';
+  const BOT_USERNAME = 'Hazikabot_bot';
+
+  const BANNED_PATTERNS = [
+    /\bху[йяеё]/i, /\bпизд/i, /\bеба[тн]/i, /\bбля/i, /\bсук[аи]\b/i, /\bмуда/i, /\bгандон/i,
+    /\bfuck/i, /\bshit\b/i, /\bbitch/i, /\bcunt/i, /\bporn/i, /\bnsfw\b/i, /\bxxx\b/i
+  ];
+  function containsBannedContent(text){
+    return BANNED_PATTERNS.some(re => re.test(text));
+  }
+
+  // Ticker content (duplicated for seamless loop)
+  const tickerItems = [
+    '<span class="up">● @satoshi_kz присоединился</span>',
+    '<span class="gold">● 3 новых связи в сети</span>',
+    '<span class="up">● @anna_web3 нашла со-фаундера</span>',
+    '<span>● новый пост от Данияра Р.</span>',
+    '<span class="gold">● 12 человек онлайн сейчас</span>'
+  ];
+  const tickerEl = document.getElementById('tickerEl');
+  tickerEl.innerHTML = tickerItems.join('') + tickerItems.join('');
+
+  // Onboarding — shown only if the profile hasn't completed it before
+  document.getElementById('enterBtn').addEventListener('click', () => completeOnboarding());
+  document.getElementById('skipBtn').addEventListener('click', () => completeOnboarding());
+  async function completeOnboarding(){
+    document.getElementById('onboarding').classList.remove('show');
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    if (me) await db.from('profiles').update({ onboarded: true }).eq('tg_id', me.tg_id);
+  }
+
+  // Nav switching — instant screen swap, background refresh (no blocking spinner on repeat visits)
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return; // ignore re-taps, avoids redundant refetch/jank
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(btn.dataset.screen).classList.add('active');
+      document.getElementById('screenLabel').textContent = btn.dataset.label;
+      document.getElementById('screenTitle').textContent = btn.dataset.title;
+      document.getElementById('screenSub').textContent = btn.dataset.sub;
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+      if (btn.dataset.screen === 'chat') renderChatList();
+      if (btn.dataset.screen === 'people') renderPeople();
+      if (btn.dataset.screen === 'feed') renderFeed();
+      if (btn.dataset.screen === 'market') loadMarket();
+    });
+  });
+
+  // ---------- Supabase connection ----------
+  const SUPABASE_URL = 'https://sxjuvyventfnldeoatcz.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_y-8Qqrz6V07szUm8UMwSYA_YQJwA_2a';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let me = null; // { tg_id, username, first_name, avatar_initials, is_developer }
+  let peopleFilter = 'all';
+  let chatFilter = 'dm';
+  let activeThreadId = null;   // friend tg_id OR group id, depending on activeThreadType
+  let activeThreadType = null; // 'dm' | 'group'
+  let friendIds = new Set();
+  let profilesCache = new Map(); // tg_id -> profile row
+  let groupsCache = new Map();   // group id -> group row
+
+  function initials(str){
+    const clean = (str || '?').replace('@','');
+    return clean.slice(0,2).toUpperCase();
+  }
+
+  function badgeHtml(p){
+    return p && p.is_developer ? ' <span class="dev-badge">⚡ Разработчик</span>' : '';
+  }
+
+  function avatarInner(p){
+    if (p && p.avatar_url) return `<img src="${p.avatar_url}" alt="">`;
+    return (p && (p.avatar_initials || initials(p.first_name))) || '?';
+  }
+
+  function timeAgo(iso){
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return 'сейчас';
+    if (min < 60) return min + ' мин назад';
+    const hrs = Math.floor(min / 60);
+    if (hrs < 24) return hrs + ' ч назад';
+    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function showToast(text, kind){
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    const t = document.createElement('div');
+    t.className = 'toast' + (kind ? ' ' + kind : '');
+    t.textContent = text;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 250); }, 2800);
+  }
+
+  // renders a list container without a blank "loading" flash on repeat calls —
+  // only shows the loading placeholder the very first time a container is empty
+  function softRender(el, html, emptyPlaceholder){
+    if (!el.dataset.loadedOnce && !html){
+      el.innerHTML = emptyPlaceholder;
+      return;
+    }
+    el.innerHTML = html || emptyPlaceholder;
+    el.dataset.loadedOnce = '1';
+  }
+
+  // ---------- Identify current user ----------
+  async function initUser(){
+    const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+    let tg_id, username, first_name;
+    if (tgUser){
+      tg_id = tgUser.id;
+      username = tgUser.username ? '@' + tgUser.username : ('@id' + tgUser.id);
+      first_name = tgUser.first_name || 'Без имени';
+    } else {
+      tg_id = Date.now();
+      username = '@guest_' + Math.floor(Math.random()*9999);
+      first_name = 'Гость';
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:var(--surface-raised);color:var(--text-dim);font-size:11px;padding:8px 20px;text-align:center;border-bottom:1px solid var(--line);';
+      banner.textContent = 'Тестовый режим вне Telegram — аккаунт временный, друзья не синхронизируются между устройствами';
+      document.querySelector('.ticker-wrap').after(banner);
+    }
+    const avatar_initials = initials(first_name || username);
+
+    // Look up existing profile first so we know whether onboarding was already completed
+    const { data: existing } = await db.from('profiles').select('*').eq('tg_id', tg_id).maybeSingle();
+
+    // Referral: if opened via an invite link (?startapp=ref_<id>), remember who invited this person
+    let invitedBy = existing ? existing.invited_by : null;
+    const startParam = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+    if (!existing && startParam && startParam.startsWith('ref_')){
+      const refId = Number(startParam.slice(4));
+      if (refId && refId !== tg_id) invitedBy = refId;
+    }
+
+    await db.from('profiles').upsert({
+      tg_id, username, first_name, avatar_initials,
+      onboarded: existing ? existing.onboarded : false,
+      is_developer: existing ? existing.is_developer : false,
+      invited_by: invitedBy
+    }, { onConflict: 'tg_id' });
+
+    me = {
+      tg_id, username, first_name, avatar_initials,
+      avatar_url: existing ? existing.avatar_url : null,
+      onboarded: existing ? existing.onboarded : false,
+      is_developer: existing ? existing.is_developer : false
+    };
+
+    // Auto-friend the inviter, only the very first time this profile is created
+    if (!existing && invitedBy){
+      await db.from('friendships').upsert([
+        { user_id: tg_id, friend_id: invitedBy },
+        { user_id: invitedBy, friend_id: tg_id }
+      ], { onConflict: 'user_id,friend_id' });
+      const { data: inviter } = await db.from('profiles').select('first_name').eq('tg_id', invitedBy).maybeSingle();
+      if (inviter) showToast(`Ты подключился по приглашению от ${inviter.first_name} — уже в друзьях 🤝`, 'success');
+    }
+
+    if (!me.onboarded){
+      document.getElementById('onboarding').classList.add('show');
+    }
+
+    if (me.is_developer){
+      document.getElementById('modOpenRow').style.display = 'flex';
+      document.querySelector('.dev-unlock').style.display = 'none';
+    }
+
+    setupInviteLink();
+    profilesCache.set(me.tg_id, me);
+    renderProfileHeader();
+    refreshMyPostCount();
+    if (me.is_developer) refreshModerationCount();
+  }
+
+  function setupInviteLink(){
+    const link = `https://t.me/${BOT_USERNAME}?startapp=ref_${me.tg_id}`;
+    document.getElementById('inviteLinkInput').value = link;
+
+    document.getElementById('inviteCopyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+        showToast('Ссылка скопирована', 'success');
+      } catch (e){
+        document.getElementById('inviteLinkInput').select();
+        showToast('Скопируй ссылку вручную из поля', 'error');
+      }
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    });
+
+    document.getElementById('inviteShareBtn').addEventListener('click', () => {
+      const text = 'Присоединяйся к Ledger — сети для тех, кто шарит в крипте 🚀';
+      const shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text);
+      if (tg && tg.openTelegramLink) tg.openTelegramLink(shareUrl);
+      else window.open(shareUrl, '_blank');
+    });
+  }
+
+  function renderProfileHeader(){
+    document.getElementById('profileAvatar').innerHTML = avatarInner(me);
+    document.getElementById('profileName').innerHTML = me.first_name + ' ' + me.username + badgeHtml(me);
+    document.getElementById('statFriends').textContent = friendIds.size;
+    updateLevel();
+  }
+
+  async function refreshMyPostCount(){
+    const { count } = await db.from('posts').select('*', { count: 'exact', head: true })
+      .eq('author_id', me.tg_id).in('status', ['approved', 'pending']);
+    document.getElementById('statPosts').textContent = count || 0;
+    updateLevel(count || 0);
+  }
+
+  function updateLevel(postCount){
+    const posts = (postCount ?? Number(document.getElementById('statPosts').textContent)) || 0;
+    const level = 1 + Math.floor((friendIds.size + posts * 2) / 5);
+    const el = document.getElementById('statLevel');
+    if (el) el.textContent = level;
+  }
+
+  // ---------- Avatar upload ----------
+  document.getElementById('avatarUploadBtn').addEventListener('click', () => document.getElementById('avatarFileInput').click());
+  document.getElementById('avatarFileInput').addEventListener('change', handleAvatarUpload);
+
+  async function handleAvatarUpload(e){
+    const file = e.target.files[0];
+    if (!file) return;
+    const hint = document.getElementById('avatarHint');
+    if (!file.type.startsWith('image/')){
+      hint.textContent = 'Нужен файл изображения (jpg, png и т.п.).';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024){
+      hint.textContent = 'Файл слишком большой — максимум 5 МБ.';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    hint.textContent = 'Загружаю…';
+    hint.style.color = 'var(--text-dim)';
+
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${me.tg_id}.${ext}`;
+    const { error: upErr } = await db.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr){
+      hint.textContent = 'Не удалось загрузить: ' + upErr.message;
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    const { data: pub } = db.storage.from('avatars').getPublicUrl(path);
+    const url = pub.publicUrl + '?t=' + Date.now(); // cache-bust so the new photo shows immediately
+
+    await db.from('profiles').update({ avatar_url: url }).eq('tg_id', me.tg_id);
+    me.avatar_url = url;
+    profilesCache.set(me.tg_id, me);
+
+    hint.textContent = 'Аватар обновлён ✅';
+    hint.style.color = 'var(--teal)';
+    renderProfileHeader();
+    renderPeople();
+    renderChatList();
+    renderFeed();
+  }
+
+  // ---------- Developer badge unlock ----------
+  document.getElementById('devCodeBtn').addEventListener('click', unlockDeveloper);
+  document.getElementById('devCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockDeveloper(); });
+  async function unlockDeveloper(){
+    const input = document.getElementById('devCodeInput');
+    const hint = document.getElementById('devCodeHint');
+    if (input.value.trim() !== DEV_CODE){
+      hint.textContent = 'Неверный код.';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    await db.from('profiles').update({ is_developer: true }).eq('tg_id', me.tg_id);
+    me.is_developer = true;
+    input.value = '';
+    document.querySelector('.dev-unlock').style.display = 'none';
+    hint.textContent = 'Метка разработчика активирована ⚡';
+    hint.style.color = 'var(--teal)';
+    renderProfileHeader();
+    document.getElementById('modOpenRow').style.display = 'flex';
+    await refreshModerationCount();
+  }
+
+  // ---------- Feed (everyone can post) ----------
+  document.getElementById('postBtn').addEventListener('click', publishPost);
+  async function publishPost(){
+    const input = document.getElementById('postInput');
+    const btn = document.getElementById('postBtn');
+    const hint = document.getElementById('postHint');
+    const text = input.value.trim();
+    hint.textContent = '';
+    if (!text) return;
+    if (containsBannedContent(text)){
+      hint.textContent = 'Пост содержит недопустимый контент (мат / 18+) и не может быть отправлен.';
+      hint.style.color = 'var(--red)';
+      showToast('Пост содержит недопустимый контент (мат / 18+).', 'error');
+      return;
+    }
+    btn.disabled = true;
+    hint.textContent = 'Отправляю…';
+    hint.style.color = 'var(--text-dim)';
+    try {
+      const { error } = await db.from('posts').insert({ author_id: me.tg_id, text, status: 'pending' });
+      if (error){
+        hint.textContent = 'Не удалось опубликовать: ' + error.message;
+        hint.style.color = 'var(--red)';
+        showToast('Не удалось опубликовать: ' + error.message, 'error');
+        return;
+      }
+      input.value = '';
+      hint.textContent = 'Пост отправлен на проверку — появится в ленте после одобрения.';
+      hint.style.color = 'var(--teal)';
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      showToast('Пост отправлен на проверку.', 'success');
+      if (me.is_developer) await refreshModerationCount();
+    } catch (e){
+      hint.textContent = 'Ошибка сети: ' + e.message;
+      hint.style.color = 'var(--red)';
+      showToast('Ошибка сети при публикации', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function renderFeed(){
+    const el = document.getElementById('feedList');
+    const { data } = await db.from('posts')
+      .select('*, author:profiles!posts_author_id_fkey(first_name, username, avatar_initials, avatar_url, is_developer)')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false }).limit(50);
+
+    const posts = data || [];
+    const ids = posts.map(p => p.id);
+    const likesByPost = {};
+    const likedByMe = new Set();
+    if (ids.length){
+      const { data: likes } = await db.from('post_likes').select('post_id, user_id').in('post_id', ids);
+      (likes || []).forEach(l => {
+        likesByPost[l.post_id] = (likesByPost[l.post_id] || 0) + 1;
+        if (l.user_id === me.tg_id) likedByMe.add(l.post_id);
+      });
+    }
+
+    const html = posts.map(post => {
+      const a = post.author || {};
+      const count = likesByPost[post.id] || 0;
+      const liked = likedByMe.has(post.id);
+      return `
+      <div class="card">
+        <div class="card-head">
+          <div class="avatar">${avatarInner(a)}</div>
+          <div>
+            <div class="name">${a.first_name || 'Без имени'}${badgeHtml(a)}</div>
+            <div class="role">${a.username || ''}</div>
+          </div>
+          <div class="post-time">${timeAgo(post.created_at)}</div>
+        </div>
+        <p class="post-text">${escapeHtml(post.text)}</p>
+        <button class="like-btn ${liked ? 'liked' : ''}" data-like="${post.id}">🔥 <span>${count}</span></button>
+      </div>`;
+    }).join('');
+
+    softRender(el, html, '<div class="empty">Постов пока нет — напиши первым.</div>');
+
+    el.querySelectorAll('[data-like]').forEach(btn => {
+      btn.addEventListener('click', () => toggleLike(Number(btn.dataset.like), btn));
+    });
+
+    refreshMyPostCount();
+  }
+
+  async function toggleLike(postId, btn){
+    const liked = btn.classList.contains('liked');
+    const countEl = btn.querySelector('span');
+    const count = Number(countEl.textContent);
+    btn.disabled = true;
+    try {
+      if (liked){
+        btn.classList.remove('liked');
+        countEl.textContent = Math.max(0, count - 1);
+        await db.from('post_likes').delete().eq('post_id', postId).eq('user_id', me.tg_id);
+      } else {
+        btn.classList.add('liked');
+        countEl.textContent = count + 1;
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        await db.from('post_likes').upsert({ post_id: postId, user_id: me.tg_id }, { onConflict: 'post_id,user_id' });
+      }
+    } catch (e){
+      showToast('Не удалось сохранить реакцию', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- Moderation (developer only) ----------
+  async function refreshModerationCount(){
+    const { count } = await db.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    document.getElementById('modPendingCount').textContent = count || 0;
+  }
+
+  document.getElementById('modOpenBtn').addEventListener('click', async () => {
+    document.getElementById('modThread').classList.add('open');
+    await renderModerationList();
+  });
+  document.getElementById('modBackBtn').addEventListener('click', () => {
+    document.getElementById('modThread').classList.remove('open');
+  });
+
+  async function renderModerationList(){
+    const list = document.getElementById('modList');
+    list.innerHTML = '<div class="empty">Загрузка…</div>';
+    const { data } = await db.from('posts')
+      .select('*, author:profiles!posts_author_id_fkey(first_name, username, avatar_initials, avatar_url)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (!data || data.length === 0){
+      list.innerHTML = '<div class="empty">Нечего проверять — все посты разобраны.</div>';
+      return;
+    }
+
+    list.innerHTML = data.map(post => {
+      const a = post.author || {};
+      return `
+      <div class="card">
+        <div class="card-head">
+          <div class="avatar">${avatarInner(a)}</div>
+          <div>
+            <div class="name">${a.first_name || 'Без имени'}</div>
+            <div class="role">${a.username || ''}</div>
+          </div>
+          <div class="post-time">${timeAgo(post.created_at)}</div>
+        </div>
+        <p class="post-text">${escapeHtml(post.text)}</p>
+        <div class="mod-actions">
+          <button class="mod-approve" data-approve="${post.id}">Одобрить</button>
+          <button class="mod-reject" data-reject="${post.id}">Отклонить</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-approve]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await db.from('posts').update({ status: 'approved' }).eq('id', Number(btn.dataset.approve));
+        await renderModerationList();
+        await refreshModerationCount();
+        renderFeed();
+      });
+    });
+    list.querySelectorAll('[data-reject]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await db.from('posts').update({ status: 'rejected' }).eq('id', Number(btn.dataset.reject));
+        await renderModerationList();
+        await refreshModerationCount();
+      });
+    });
+  }
+
+  // ---------- People (Все / Друзья) ----------
+  async function loadFriendIds(){
+    const { data } = await db.from('friendships').select('friend_id').eq('user_id', me.tg_id);
+    friendIds = new Set((data || []).map(r => r.friend_id));
+  }
+
+  async function renderPeople(){
+    const list = document.getElementById('peopleList');
+    await loadFriendIds();
+    renderProfileHeader();
+
+    if (peopleFilter === 'top'){
+      const { data } = await db.from('leaderboard').select('*').limit(30);
+      const rows = data || [];
+      rows.forEach(p => profilesCache.set(p.tg_id, { ...p }));
+
+      const medals = ['🥇', '🥈', '🥉'];
+      const html = rows.map((p, i) => {
+        const isFriend = friendIds.has(p.tg_id);
+        const isMe = p.tg_id === me.tg_id;
+        return `
+        <div class="person-row" data-open-chat="${isFriend ? p.tg_id : ''}">
+          <div class="rank-num">${medals[i] || (i + 1)}</div>
+          <div class="avatar">${avatarInner(p)}</div>
+          <div class="person-info">
+            <div class="name">${p.first_name}${isMe ? ' (ты)' : ''}${badgeHtml(p)} <span class="uname">${p.username}</span></div>
+            <div class="role">Уровень ${p.level} · ${p.friend_count} связей · ${p.post_count} постов</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      softRender(list, html, '<div class="empty">Рейтинг пока пуст.</div>');
+      list.querySelectorAll('[data-open-chat]').forEach(row => {
+        const id = row.dataset.openChat;
+        if (id) row.addEventListener('click', () => openDMThread(Number(id)));
+      });
+      return;
+    }
+
+    let rows = [];
+    if (peopleFilter === 'friends'){
+      const ids = [...friendIds];
+      if (ids.length){
+        const { data } = await db.from('profiles').select('*').in('tg_id', ids);
+        rows = data || [];
+      }
+    } else {
+      const { data } = await db.from('profiles').select('*').neq('tg_id', me.tg_id).order('created_at', { ascending: false }).limit(50);
+      rows = data || [];
+    }
+    rows.forEach(p => profilesCache.set(p.tg_id, p));
+
+    const emptyMsg = peopleFilter === 'friends'
+      ? '<div class="empty">Пока нет друзей.<br>Добавь кого-то по username выше.</div>'
+      : '<div class="empty">Пока в сети больше никого нет.<br>Позови друзей открыть аппу — тогда они появятся здесь.</div>';
+
+    const html = rows.map(p => {
+      const isFriend = friendIds.has(p.tg_id);
+      return `
+      <div class="person-row" data-open-chat="${isFriend ? p.tg_id : ''}">
+        <div class="avatar">${avatarInner(p)}</div>
+        <div class="person-info">
+          <div class="name">${p.first_name}${badgeHtml(p)} <span class="uname">${p.username}</span></div>
+          <div class="role">${isFriend ? 'В друзьях' : 'Участник сети'}</div>
+        </div>
+        <button class="connect-btn ${isFriend ? 'is-friend' : ''}" data-friend-toggle="${p.tg_id}">
+          ${isFriend ? 'Друг ✓' : 'Добавить в друзья'}
+        </button>
+      </div>`;
+    }).join('');
+
+    softRender(list, html, emptyMsg);
+
+    list.querySelectorAll('[data-friend-toggle]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const friendId = Number(btn.dataset.friendToggle);
+        if (friendIds.has(friendId)) return;
+        btn.textContent = 'Друг ✓';
+        btn.classList.add('is-friend');
+        await addFriendById(friendId);
+        renderPeople();
+        renderChatList();
+      });
+    });
+
+    list.querySelectorAll('[data-open-chat]').forEach(row => {
+      const id = row.dataset.openChat;
+      if (id) row.addEventListener('click', () => openDMThread(Number(id)));
+    });
+  }
+
+  async function addFriendById(friendId){
+    await db.from('friendships').upsert([
+      { user_id: me.tg_id, friend_id: friendId },
+      { user_id: friendId, friend_id: me.tg_id }
+    ], { onConflict: 'user_id,friend_id' });
+    friendIds.add(friendId);
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  }
+
+  document.getElementById('addFriendBtn').addEventListener('click', addFriendByUsername);
+  document.getElementById('addFriendInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addFriendByUsername();
+  });
+
+  async function addFriendByUsername(){
+    const input = document.getElementById('addFriendInput');
+    const hint = document.getElementById('addFriendHint');
+    let value = input.value.trim();
+    if (!value) return;
+    if (!value.startsWith('@')) value = '@' + value;
+    const usernamePattern = /^@[a-zA-Z0-9_]{5,32}$/;
+    if (!usernamePattern.test(value)){
+      hint.textContent = 'Похоже, это не похоже на username Telegram (например, @nurlan_b)';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    if (value.toLowerCase() === me.username.toLowerCase()){
+      hint.textContent = 'Это твой собственный username 🙂';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    const { data } = await db.from('profiles').select('*').ilike('username', value).limit(1);
+    if (!data || data.length === 0){
+      hint.textContent = 'Такого пользователя пока нет в аппе — он должен хотя бы раз открыть её в Telegram, тогда сможешь добавить.';
+      hint.style.color = 'var(--red)';
+      return;
+    }
+    const person = data[0];
+    profilesCache.set(person.tg_id, person);
+    await addFriendById(person.tg_id);
+    input.value = '';
+    hint.textContent = `${person.first_name} добавлен(а) в друзья — теперь можно писать в «Чат».`;
+    hint.style.color = 'var(--teal)';
+    renderPeople();
+    renderChatList();
+  }
+
+  document.querySelectorAll('#people .filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#people .filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      peopleFilter = tab.dataset.filter;
+      renderPeople();
+    });
+  });
+
+  // ---------- Chat: DM list + Groups list ----------
+  document.querySelectorAll('#chat .filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#chat .filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      chatFilter = tab.dataset.chatFilter;
+      renderChatList();
+    });
+  });
+
+  async function renderChatList(){
+    if (chatFilter === 'groups') return renderGroupList();
+    const list = document.getElementById('chatList');
+    await loadFriendIds();
+    const ids = [...friendIds];
+    if (ids.length === 0){
+      softRender(list, '', '<div class="empty">Переписок пока нет.<br>Добавь кого-то в друзья на вкладке «Люди».</div>');
+      return;
+    }
+    const { data: friends } = await db.from('profiles').select('*').in('tg_id', ids);
+    (friends || []).forEach(p => profilesCache.set(p.tg_id, p));
+
+    const rows = await Promise.all((friends || []).map(async (f) => {
+      const { data: lastMsgs } = await db.from('messages').select('*')
+        .or(`and(sender_id.eq.${me.tg_id},receiver_id.eq.${f.tg_id}),and(sender_id.eq.${f.tg_id},receiver_id.eq.${me.tg_id})`)
+        .order('created_at', { ascending: false }).limit(1);
+      return { profile: f, last: lastMsgs && lastMsgs[0] };
+    }));
+
+    rows.sort((a, b) => {
+      const ta = a.last ? new Date(a.last.created_at).getTime() : 0;
+      const tb = b.last ? new Date(b.last.created_at).getTime() : 0;
+      return tb - ta;
+    });
+
+    const html = rows.map(({ profile: f, last }) => `
+      <div class="chat-row" data-open-chat="${f.tg_id}">
+        <div class="avatar">${avatarInner(f)}</div>
+        <div class="chat-info">
+          <div class="name">${f.first_name}${badgeHtml(f)}</div>
+          <div class="chat-preview">${last ? (last.sender_id === me.tg_id ? 'Вы: ' : '') + escapeHtml(last.text) : 'Пока нет сообщений — напиши первым'}</div>
+        </div>
+        <div class="chat-meta">
+          <div class="chat-time">${last ? new Date(last.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    softRender(list, html, '<div class="empty">Переписок пока нет.</div>');
+
+    list.querySelectorAll('[data-open-chat]').forEach(row => {
+      row.addEventListener('click', () => openDMThread(Number(row.dataset.openChat)));
+    });
+  }
+
+  async function renderGroupList(){
+    const list = document.getElementById('chatList');
+    const { data: memberships } = await db.from('group_members').select('group_id').eq('user_id', me.tg_id);
+    const groupIds = (memberships || []).map(m => m.group_id);
+    if (groupIds.length === 0){
+      softRender(list, '', '<div class="empty">Групп пока нет.<br>Нажми «+ Группа» выше, чтобы создать.</div>');
+      return;
+    }
+    const { data: groups } = await db.from('groups').select('*').in('id', groupIds);
+    (groups || []).forEach(g => groupsCache.set(g.id, g));
+
+    const rows = await Promise.all((groups || []).map(async (g) => {
+      const { data: lastMsgs } = await db.from('messages').select('*').eq('group_id', g.id)
+        .order('created_at', { ascending: false }).limit(1);
+      const { count } = await db.from('group_members').select('*', { count: 'exact', head: true }).eq('group_id', g.id);
+      return { group: g, last: lastMsgs && lastMsgs[0], count: count || 0 };
+    }));
+
+    rows.sort((a, b) => {
+      const ta = a.last ? new Date(a.last.created_at).getTime() : 0;
+      const tb = b.last ? new Date(b.last.created_at).getTime() : 0;
+      return tb - ta;
+    });
+
+    const html = rows.map(({ group: g, last, count }) => `
+      <div class="chat-row" data-open-group="${g.id}">
+        <div class="avatar">${g.avatar_initials || initials(g.name)}</div>
+        <div class="chat-info">
+          <div class="name">${g.name}</div>
+          <div class="chat-preview">${last ? escapeHtml(last.text) : count + ' участник(ов)'}</div>
+        </div>
+        <div class="chat-meta">
+          <div class="chat-time">${last ? new Date(last.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    softRender(list, html, '<div class="empty">Групп пока нет.</div>');
+
+    list.querySelectorAll('[data-open-group]').forEach(row => {
+      row.addEventListener('click', () => openGroupThread(Number(row.dataset.openGroup)));
+    });
+  }
+
+  // ---------- Group creation ----------
+  const groupPanel = document.getElementById('groupPanel');
+  document.getElementById('newGroupBtn').addEventListener('click', async () => {
+    const opening = !groupPanel.classList.contains('open');
+    groupPanel.classList.toggle('open');
+    if (opening) await populateFriendCheckList();
+  });
+  document.getElementById('groupCancelBtn').addEventListener('click', () => {
+    groupPanel.classList.remove('open');
+  });
+
+  async function populateFriendCheckList(){
+    await loadFriendIds();
+    const box = document.getElementById('friendCheckList');
+    const ids = [...friendIds];
+    if (ids.length === 0){
+      box.innerHTML = '<div class="empty" style="padding:12px 0;">Сначала добавь друзей — группу можно создать только с ними.</div>';
+      return;
+    }
+    const { data } = await db.from('profiles').select('*').in('tg_id', ids);
+    box.innerHTML = (data || []).map(p => `
+      <label class="friend-check-row">
+        <input type="checkbox" value="${p.tg_id}">
+        <span>${p.first_name} <span class="uname">${p.username}</span></span>
+      </label>
+    `).join('');
+  }
+
+  document.getElementById('groupCreateBtn').addEventListener('click', async () => {
+    const nameInput = document.getElementById('groupNameInput');
+    const name = nameInput.value.trim();
+    if (!name){ nameInput.focus(); return; }
+    const checked = [...document.querySelectorAll('#friendCheckList input[type="checkbox"]:checked')].map(c => Number(c.value));
+
+    const { data: created, error } = await db.from('groups')
+      .insert({ name, avatar_initials: initials(name), creator_id: me.tg_id })
+      .select().single();
+    if (error || !created) return;
+
+    const members = [me.tg_id, ...checked].map(uid => ({ group_id: created.id, user_id: uid }));
+    await db.from('group_members').insert(members);
+
+    groupsCache.set(created.id, created);
+    nameInput.value = '';
+    groupPanel.classList.remove('open');
+    document.querySelectorAll('#chat .filter-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('#chat .filter-tab[data-chat-filter="groups"]').classList.add('active');
+    chatFilter = 'groups';
+    await renderGroupList();
+    openGroupThread(created.id);
+  });
+
+  // ---------- Chat thread (shared overlay for DM + groups) ----------
+  async function openDMThread(friendId){
+    activeThreadType = 'dm';
+    activeThreadId = friendId;
+    let profile = profilesCache.get(friendId);
+    if (!profile){
+      const { data } = await db.from('profiles').select('*').eq('tg_id', friendId).maybeSingle();
+      profile = data;
+      if (profile) profilesCache.set(friendId, profile);
+    }
+    document.getElementById('threadAvatar').innerHTML = avatarInner(profile);
+    document.getElementById('threadName').innerHTML = (profile ? profile.first_name : '...') + badgeHtml(profile);
+    document.getElementById('threadRole').textContent = profile ? profile.username : '';
+    document.getElementById('chatThread').classList.add('open');
+    await renderMessages();
+  }
+
+  async function openGroupThread(groupId){
+    activeThreadType = 'group';
+    activeThreadId = groupId;
+    let group = groupsCache.get(groupId);
+    if (!group){
+      const { data } = await db.from('groups').select('*').eq('id', groupId).maybeSingle();
+      group = data;
+      if (group) groupsCache.set(groupId, group);
+    }
+    document.getElementById('threadAvatar').innerHTML = avatarInner(group);
+    document.getElementById('threadName').textContent = group ? group.name : '...';
+    document.getElementById('threadRole').textContent = 'Группа';
+    document.getElementById('chatThread').classList.add('open');
+    await renderMessages();
+  }
+
+  async function renderMessages(){
+    const box = document.getElementById('chatMessages');
+    let query;
+    if (activeThreadType === 'group'){
+      query = db.from('messages').select('*, sender:profiles!messages_sender_id_fkey(first_name, is_developer)')
+        .eq('group_id', activeThreadId).order('created_at', { ascending: true });
+    } else {
+      query = db.from('messages').select('*')
+        .or(`and(sender_id.eq.${me.tg_id},receiver_id.eq.${activeThreadId}),and(sender_id.eq.${activeThreadId},receiver_id.eq.${me.tg_id})`)
+        .order('created_at', { ascending: true });
+    }
+    const { data } = await query;
+
+    const html = (data || []).map(m => {
+      const mine = m.sender_id === me.tg_id;
+      const senderLabel = (activeThreadType === 'group' && !mine && m.sender)
+        ? `<div class="msg-sender">${m.sender.first_name}${badgeHtml(m.sender)}</div>` : '';
+      return `${senderLabel}<div class="msg ${mine ? 'me' : 'them'}">${escapeHtml(m.text)}</div>`;
+    }).join('');
+
+    box.innerHTML = html || '<div class="empty">Сообщений пока нет — напиши первым</div>';
+    box.scrollTop = box.scrollHeight;
+  }
+
+  document.getElementById('chatBackBtn').addEventListener('click', () => {
+    document.getElementById('chatThread').classList.remove('open');
+    activeThreadId = null;
+    activeThreadType = null;
+    renderChatList();
+  });
+
+  async function sendCurrentMessage(){
+    const input = document.getElementById('chatInput');
+    const btn = document.getElementById('chatSendBtn');
+    const text = input.value.trim();
+    if (!text || !activeThreadId) return;
+    btn.disabled = true;
+    try {
+      let error;
+      if (activeThreadType === 'group'){
+        ({ error } = await db.from('messages').insert({ sender_id: me.tg_id, group_id: activeThreadId, text }));
+      } else {
+        ({ error } = await db.from('messages').insert({ sender_id: me.tg_id, receiver_id: activeThreadId, text }));
+      }
+      if (error){
+        showToast('Не удалось отправить: ' + error.message, 'error');
+        return; // keep text in the input so nothing is lost
+      }
+      input.value = '';
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+      await renderMessages();
+    } catch (e){
+      showToast('Ошибка сети при отправке: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('chatSendBtn').addEventListener('click', sendCurrentMessage);
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendCurrentMessage();
+  });
+
+  // ---------- Realtime: live-update open thread / chat list / feed ----------
+  function subscribeRealtime(){
+    db.channel('messages-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const m = payload.new;
+        const involvesMeDM = m.sender_id === me.tg_id || m.receiver_id === me.tg_id;
+        const involvesGroup = !!m.group_id;
+        if (!involvesMeDM && !involvesGroup) return;
+        if (activeThreadType === 'dm' && (m.sender_id === activeThreadId || m.receiver_id === activeThreadId)) renderMessages();
+        if (activeThreadType === 'group' && m.group_id === activeThreadId) renderMessages();
+        if (document.getElementById('chat').classList.contains('active')) renderChatList();
+      })
+      .subscribe();
+
+    db.channel('posts-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        if (document.getElementById('feed').classList.contains('active')) renderFeed();
+        if (me.is_developer) refreshModerationCount();
+      })
+      .subscribe();
+
+    db.channel('likes-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => {
+        if (document.getElementById('feed').classList.contains('active')) renderFeed();
+      })
+      .subscribe();
+  }
+
+  // ---------- Market / crypto charts ----------
+  const COINS = [
+    { id:'bitcoin', symbol:'BTC' }, { id:'ethereum', symbol:'ETH' }, { id:'binancecoin', symbol:'BNB' },
+    { id:'solana', symbol:'SOL' }, { id:'ripple', symbol:'XRP' }, { id:'cardano', symbol:'ADA' },
+    { id:'dogecoin', symbol:'DOGE' }, { id:'the-open-network', symbol:'TON' }, { id:'tron', symbol:'TRX' },
+    { id:'polkadot', symbol:'DOT' }, { id:'chainlink', symbol:'LINK' }, { id:'avalanche-2', symbol:'AVAX' },
+    { id:'litecoin', symbol:'LTC' }, { id:'shiba-inu', symbol:'SHIB' }
+  ];
+  let activeCoin = 'bitcoin';
+  let activeRange = 1;
+  let marketLoadedOnce = false;
+  let marketInterval = null;
+
+  document.querySelectorAll('#rangeTabs .filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#rangeTabs .filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeRange = Number(tab.dataset.range);
+      loadChart();
+    });
+  });
+
+  function startMarketAutoRefresh(){
+    stopMarketAutoRefresh();
+    marketInterval = setInterval(() => {
+      if (document.getElementById('market').classList.contains('active')) loadMarket();
+      else stopMarketAutoRefresh();
+    }, 30000);
+  }
+  function stopMarketAutoRefresh(){
+    if (marketInterval){ clearInterval(marketInterval); marketInterval = null; }
+  }
+
+  let fearGreedLoadedOnce = false;
+
+  async function loadMarket(){
+    await loadMonitorList();
+    await loadChart();
+    await loadFearGreed();
+    marketLoadedOnce = true;
+    if (!marketInterval) startMarketAutoRefresh();
+  }
+
+  async function loadFearGreed(){
+    try {
+      const res = await fetch(SUPABASE_URL + '/functions/v1/news-proxy?type=fear-greed');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const fg = await res.json();
+      const value = fg.current?.value ?? fg.value ?? fg.score ?? fg.data?.value;
+      let label = fg.current?.valueClassification ?? fg.classification ?? fg.label ?? fg.data?.classification ?? '';
+      const labelMap = {
+        'Extreme Fear': 'Крайний страх', 'Fear': 'Страх', 'Neutral': 'Нейтрально',
+        'Greed': 'Жадность', 'Extreme Greed': 'Крайняя жадность'
+      };
+      label = labelMap[label] || label;
+      if (value === undefined) return;
+      document.getElementById('fearGreedCard').style.display = 'flex';
+      document.getElementById('fgValue').textContent = value;
+      document.getElementById('fgClassification').textContent = label;
+      const el = document.getElementById('fgValue');
+      el.style.borderColor = value >= 55 ? '#FFD84D' : value <= 45 ? '#FF7B7B' : '#F0DA8F';
+      el.style.color = el.style.borderColor;
+      fearGreedLoadedOnce = true;
+    } catch (e){
+      if (!fearGreedLoadedOnce) document.getElementById('fearGreedCard').style.display = 'none';
+    }
+  }
+
+  let monitorDataCache = {};
+
+  async function loadMonitorList(){
+    const list = document.getElementById('monitorList');
+    try {
+      const ids = COINS.map(c => c.id).join(',');
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}`);
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('bad response');
+
+      data.forEach(c => { monitorDataCache[c.id] = c; });
+
+      const html = data.map(c => {
+        const change = c.price_change_percentage_24h || 0;
+        const dec = c.current_price < 1 ? 6 : 2;
+        return `
+        <div class="chat-row ${c.id === activeCoin ? 'selected' : ''}" data-select-coin="${c.id}">
+          <div class="avatar coin-logo"><img src="${c.image}" alt=""></div>
+          <div class="chat-info">
+            <div class="name">${c.name} <span class="uname">${c.symbol.toUpperCase()}</span></div>
+            <div class="chat-preview">$${c.current_price.toLocaleString('en-US', { maximumFractionDigits: dec })}</div>
+          </div>
+          <div class="market-change ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</div>
+        </div>`;
+      }).join('');
+
+      softRender(list, html, '<div class="empty">Не удалось загрузить котировки.</div>');
+
+      list.querySelectorAll('[data-select-coin]').forEach(row => {
+        row.addEventListener('click', () => {
+          if (row.dataset.selectCoin === activeCoin) return;
+          activeCoin = row.dataset.selectCoin;
+          list.querySelectorAll('.chat-row').forEach(r => r.classList.remove('selected'));
+          row.classList.add('selected');
+          renderCoinHeaderFromCache(activeCoin);
+          loadChart();
+        });
+      });
+    } catch (e){
+      if (!marketLoadedOnce) list.innerHTML = '<div class="empty">Не удалось загрузить котировки.</div>';
+    }
+  }
+
+  function renderCoinHeaderFromCache(coinId){
+    const coin = monitorDataCache[coinId];
+    if (!coin) return;
+    document.getElementById('chartCoinRow').innerHTML =
+      `<img src="${coin.image}" alt=""><span>${coin.name} · ${coin.symbol.toUpperCase()}</span>`;
+    const decimals = coin.current_price < 1 ? 6 : 2;
+    document.getElementById('marketPrice').textContent = '$' + coin.current_price.toLocaleString('en-US', { maximumFractionDigits: decimals });
+    const change = coin.price_change_percentage_24h || 0;
+    const changeEl = document.getElementById('marketChange');
+    changeEl.textContent = (change >= 0 ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
+    changeEl.className = 'market-change ' + (change >= 0 ? 'up' : 'down');
+  }
+
+  const chartCache = new Map(); // "coinId_range" -> { prices, ts }
+  const CHART_CACHE_TTL = 60000;
+
+  async function loadChart(){
+    const priceEl = document.getElementById('marketPrice');
+    // Show cached price instantly (from the monitor list) instead of a blank "Загрузка…" while the chart itself fetches
+    if (monitorDataCache[activeCoin]) renderCoinHeaderFromCache(activeCoin);
+    else if (!marketLoadedOnce) priceEl.textContent = 'Загрузка…';
+
+    const cacheKey = activeCoin + '_' + activeRange;
+    const cached = chartCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CHART_CACHE_TTL){
+      drawChart(cached.prices);
+      return;
+    }
+
+    const svg = document.getElementById('chartSvg');
+    svg.style.opacity = '.35';
+
+    try {
+      const chartRes = await fetch(`https://api.coingecko.com/api/v3/coins/${activeCoin}/market_chart?vs_currency=usd&days=${activeRange}`);
+      const chart = await chartRes.json();
+      const prices = (chart && chart.prices) || [];
+      chartCache.set(cacheKey, { prices, ts: Date.now() });
+      drawChart(prices);
+
+      // Refresh exact current price/change for the selected coin in the background (not blocking the chart)
+      fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${activeCoin}`)
+        .then(r => r.json())
+        .then(markets => {
+          const coin = Array.isArray(markets) ? markets[0] : null;
+          if (coin){ monitorDataCache[coin.id] = coin; if (coin.id === activeCoin) renderCoinHeaderFromCache(activeCoin); }
+        })
+        .catch(() => {});
+    } catch (e){
+      if (!marketLoadedOnce){
+        priceEl.textContent = 'Не удалось загрузить';
+        showToast('Ошибка загрузки графика — попробуй позже', 'error');
+      }
+    } finally {
+      svg.style.opacity = '1';
+    }
+  }
+
+  function drawChart(prices){
+    const svg = document.getElementById('chartSvg');
+    if (!prices || prices.length < 2){ svg.innerHTML = ''; return; }
+    const values = prices.map(p => p[1]);
+    const min = Math.min(...values), max = Math.max(...values);
+    const w = 320, h = 160, pad = 8;
+    const points = values.map((v, i) => {
+      const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((v - min) / ((max - min) || 1)) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const trendUp = values[values.length - 1] >= values[0];
+    const color = trendUp ? '#FFD84D' : '#FF7B7B';
+    const linePoints = points.join(' ');
+    const areaPoints = `${pad},${h - pad} ` + linePoints + ` ${w - pad},${h - pad}`;
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="chartFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${areaPoints}" fill="url(#chartFade)"/>
+      <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    `;
+  }
+
+  // ---------- News (auto-fetched crypto news, watermarked) ----------
+  let feedTab = 'posts';
+  let newsLoadedOnce = false;
+  let newsInterval = null;
+
+  document.querySelectorAll('#feedTabs .filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.feedTab === feedTab) return;
+      document.querySelectorAll('#feedTabs .filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      feedTab = tab.dataset.feedTab;
+      const isNews = feedTab === 'news';
+      document.getElementById('composerBox').style.display = isNews ? 'none' : 'block';
+      document.getElementById('feedList').style.display = isNews ? 'none' : 'block';
+      document.getElementById('newsList').style.display = isNews ? 'block' : 'none';
+      if (isNews){
+        loadNews();
+        startNewsAutoRefresh();
+      } else {
+        stopNewsAutoRefresh();
+      }
+    });
+  });
+
+  function startNewsAutoRefresh(){
+    stopNewsAutoRefresh();
+    newsInterval = setInterval(() => {
+      if (feedTab === 'news' && document.getElementById('feed').classList.contains('active')) loadNews();
+      else stopNewsAutoRefresh();
+    }, 60000);
+  }
+  function stopNewsAutoRefresh(){
+    if (newsInterval){ clearInterval(newsInterval); newsInterval = null; }
+  }
+
+  async function loadNews(){
+    const el = document.getElementById('newsList');
+    try {
+      const res = await fetch(SUPABASE_URL + '/functions/v1/news-proxy');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const items = (json.articles || json.data || []).slice(0, 40);
+
+      if (items.length === 0){
+        if (!newsLoadedOnce){
+          el.innerHTML = '<div class="empty">Новостей пока нет.<br><span style="font-family:var(--font-mono); font-size:10px;">(источник ответил, но без статей)</span></div>';
+        }
+        newsLoadedOnce = true;
+        return;
+      }
+
+      const html = items.map(n => {
+        const src = n.source || n.source_name || 'Источник';
+        const rawDate = n.publishedAt || n.published_at || n.date || n.pubDate;
+        const time = rawDate ? timeAgo(new Date(rawDate).toISOString()) : '';
+        const img = n.image || n.imageUrl || n.thumbnail || '';
+        const link = n.url || n.link || n.article_url || n.source_url || '';
+        return `
+        <div class="card news-card">
+          <div class="news-watermark">◆ LEDGER</div>
+          ${img ? `<img class="news-img" src="${img}" alt="">` : ''}
+          <div class="news-source">${escapeHtml(src)}${time ? ' · ' + time : ''}</div>
+          <p class="news-title">${escapeHtml(n.title || '')}</p>
+          <button class="news-link" data-url="${escapeHtml(link)}">Читать полностью →</button>
+        </div>`;
+      }).join('');
+
+      softRender(el, html, '<div class="empty">Новостей пока нет.</div>');
+
+      el.querySelectorAll('[data-url]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const url = btn.dataset.url;
+          if (!url || !/^https?:\/\//i.test(url)){
+            showToast('Ссылка на статью недоступна', 'error');
+            return;
+          }
+          if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank');
+        });
+      });
+      newsLoadedOnce = true;
+    } catch (e){
+      if (!newsLoadedOnce){
+        el.innerHTML = `<div class="empty">Не удалось загрузить новости.<br><span style="font-family:var(--font-mono); font-size:10px;">${escapeHtml(e.message)}</span></div>`;
+        showToast('Ошибка загрузки новостей: ' + e.message, 'error');
+      }
+    }
+  }
+
+  // ---------- Boot ----------
+  (async function boot(){
+    await initUser();
+    await renderFeed();
+    await renderPeople();
+    await renderChatList();
+    subscribeRealtime();
+  })();
+</script>
+</body>
+</html>
